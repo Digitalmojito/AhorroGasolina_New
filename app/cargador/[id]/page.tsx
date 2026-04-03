@@ -195,20 +195,13 @@ async function getChargerFromOcm(ocmId: number): Promise<Charger | null> {
   }
 }
 
-async function getChargerData(id: string): Promise<Charger | null> {
-  if (id.startsWith("ocm-")) {
-    const ocmId = parseInt(id.replace("ocm-", ""), 10)
-    if (!isNaN(ocmId)) return getChargerFromOcm(ocmId)
-    return null
-  }
-
+async function getChargerFromDb(id: string): Promise<Charger | null> {
   try {
     const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from("chargers")
-      .select("*, charger_connectors(*)")
-      .eq("id", id)
-      .maybeSingle()
+    const query = supabase.from("chargers").select("*, charger_connectors(*)")
+    const { data, error } = id.startsWith("ocm-")
+      ? await query.eq("ocm_id", parseInt(id.replace("ocm-", ""), 10)).maybeSingle()
+      : await query.eq("id", id).maybeSingle()
 
     if (error || !data) return null
 
@@ -254,6 +247,20 @@ async function getChargerData(id: string): Promise<Charger | null> {
     return null
   }
 }
+
+async function getChargerData(id: string): Promise<Charger | null> {
+  const fromDb = await getChargerFromDb(id)
+  if (fromDb) return fromDb
+
+  if (id.startsWith("ocm-")) {
+    const ocmId = parseInt(id.replace("ocm-", ""), 10)
+    if (!isNaN(ocmId)) return getChargerFromOcm(ocmId)
+    return null
+  }
+
+  return null
+}
+
 
 const STATUS_ICONS: Record<ChargerStatus, React.ReactNode> = {
   operational: <CheckCircle2 className="h-4 w-4" />,
