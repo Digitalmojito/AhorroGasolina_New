@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Car, Plus, Trash2, Pencil, Check, X, Droplets, Star, Zap, Info, Flame, Leaf, BatteryCharging, PlugZap } from "lucide-react"
+import { useState, useCallback } from "react"
+import { Car, Plus, Trash2, Pencil, Check, X, Droplets, Star, Zap, Info, Flame, Leaf, BatteryCharging, PlugZap, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -254,6 +254,41 @@ function VehicleForm({
   error?: string | null
   isEdit?: boolean
 }) {
+  const [enriching, setEnriching] = useState(false)
+  const [enriched, setEnriched] = useState(false)
+
+  const handleModelSelect = useCallback(async (model: string) => {
+    setForm((prev) => ({ ...prev, car_model: model }))
+    if (!form.car_make || !model) return
+    setEnriching(true)
+    setEnriched(false)
+    try {
+      const res = await fetch(`/api/vehicle-info?action=enrich&make=${encodeURIComponent(form.car_make)}&model=${encodeURIComponent(model)}`)
+      if (res.ok) {
+        const data = await res.json() as { powertrain: string | null; fuel_type: string | null; body_type: string | null }
+        setForm((prev) => {
+          const powertrain = data.powertrain ?? prev.powertrain
+          const isEV = powertrain === "electric"
+          return {
+            ...prev,
+            car_model: model,
+            powertrain: data.powertrain ?? prev.powertrain,
+            body_type: data.body_type ?? prev.body_type,
+            fuel_type: data.fuel_type
+              ? (data.fuel_type as typeof prev.fuel_type)
+              : isEV
+                ? "electric"
+                : prev.fuel_type === "electric"
+                  ? "gasolina95"
+                  : prev.fuel_type,
+          }
+        })
+        if (data.powertrain || data.fuel_type || data.body_type) setEnriched(true)
+      }
+    } catch { /* ignore */ }
+    setEnriching(false)
+  }, [form.car_make, setForm])
+
   return (
     <div className="space-y-3">
       {error && <p className="text-xs text-red-500">{error}</p>}
@@ -262,7 +297,7 @@ function VehicleForm({
         <Label className="text-xs text-slate-500">Marca</Label>
         <Select
           value={form.car_make}
-          onValueChange={(val) => setForm((prev) => ({ ...prev, car_make: val, car_model: "" }))}
+          onValueChange={(val) => { setForm((prev) => ({ ...prev, car_make: val, car_model: "" })); setEnriched(false) }}
         >
           <SelectTrigger className="border-slate-200 bg-white h-10">
             <SelectValue placeholder="Selecciona la marca..." />
@@ -277,10 +312,24 @@ function VehicleForm({
 
       {form.car_make && models.length > 0 && (
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">Modelo</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-slate-500">Modelo</Label>
+            {enriching && (
+              <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 animate-pulse">
+                <Sparkles className="h-3 w-3" />
+                Detectando datos...
+              </span>
+            )}
+            {enriched && !enriching && (
+              <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                Datos pre-rellenados
+              </span>
+            )}
+          </div>
           <Select
             value={form.car_model}
-            onValueChange={(val) => setForm((prev) => ({ ...prev, car_model: val }))}
+            onValueChange={handleModelSelect}
           >
             <SelectTrigger className="border-slate-200 bg-white h-10">
               <SelectValue placeholder="Selecciona el modelo..." />
@@ -354,7 +403,7 @@ function VehicleForm({
       )}
 
       <div className="flex gap-2">
-        <Button size="sm" onClick={onSave} disabled={saving} className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 h-8">
+        <Button size="sm" onClick={onSave} disabled={saving || enriching} className="bg-emerald-700 hover:bg-emerald-800 text-white gap-1.5 h-8">
           <Check className="h-3.5 w-3.5" />
           {saving ? "Guardando..." : isEdit ? "Guardar" : "Añadir"}
         </Button>
