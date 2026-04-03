@@ -1,0 +1,8 @@
+export { SuvIcon } from "./suv-icon"
+export { BerlinaIcon } from "./berlina-icon"
+export { MonovolumenIcon } from "./monovolumen-icon"
+export { UrbanoIcon } from "./urbano-icon"
+export { RancheraIcon } from "./ranchera-icon"
+export { DeportivoIcon } from "./deportivo-icon"
+export { DescapotableIcon } from "./descapotable-icon"
+export { ComercialIcon } from "./comercial-icon"
