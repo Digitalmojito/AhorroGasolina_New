@@ -83,6 +83,19 @@ export function ChargerCard({ charger, className }: ChargerCardProps) {
     return order.indexOf(c.speed_tier) > order.indexOf(best) ? c.speed_tier : best
   }, null)
 
+  const detailPayload = encodeURIComponent(btoa(JSON.stringify({
+    name: charger.name, operator_name: charger.operator_name,
+    address: charger.address, city: charger.city, province: charger.province,
+    postcode: charger.postcode, lat: charger.lat, lng: charger.lng,
+    status: charger.status, status_last_updated: charger.status_last_updated,
+    usage_cost_raw: charger.usage_cost_raw, usage_cost_per_kwh: charger.usage_cost_per_kwh,
+    usage_cost_per_minute: charger.usage_cost_per_minute, is_free: charger.is_free,
+    access_type: charger.access_type, ocm_url: charger.ocm_url,
+    last_synced_at: charger.last_synced_at, ocm_id: charger.ocm_id,
+    connectors: charger.connectors,
+  })))
+  const detailHref = `/cargador/${charger.id}?d=${detailPayload}`
+
   return (
     <div
       className={cn(
@@ -94,7 +107,7 @@ export function ChargerCard({ charger, className }: ChargerCardProps) {
     >
       <div className={cn("absolute left-0 top-0 bottom-0 w-1", statusCfg.barClass)} />
 
-      <Link href={`/cargador/${charger.id}`} className="block pl-3 pr-4 pt-3.5 pb-3">
+      <Link href={detailHref} className="block pl-3 pr-4 pt-3.5 pb-3">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-400 flex items-center justify-center shadow-sm mt-0.5">
             <Zap className="h-5 w-5 text-slate-900" />

@@ -25,6 +25,38 @@ export const metadata: Metadata = {
 
 interface PageProps {
   params: { id: string }
+  searchParams: { d?: string }
+}
+
+function parseInlineCharger(id: string, d: string): Charger | null {
+  try {
+    const json = atob(decodeURIComponent(d))
+    const raw = JSON.parse(json) as Record<string, unknown>
+    return {
+      id,
+      ocm_id: Number(raw.ocm_id),
+      name: String(raw.name ?? ""),
+      operator_name: String(raw.operator_name ?? ""),
+      address: String(raw.address ?? ""),
+      city: String(raw.city ?? ""),
+      province: String(raw.province ?? ""),
+      postcode: String(raw.postcode ?? ""),
+      lat: Number(raw.lat),
+      lng: Number(raw.lng),
+      status: (raw.status as ChargerStatus) ?? "unknown",
+      status_last_updated: raw.status_last_updated ? String(raw.status_last_updated) : undefined,
+      usage_cost_raw: raw.usage_cost_raw ? String(raw.usage_cost_raw) : undefined,
+      usage_cost_per_kwh: raw.usage_cost_per_kwh != null ? Number(raw.usage_cost_per_kwh) : undefined,
+      usage_cost_per_minute: raw.usage_cost_per_minute != null ? Number(raw.usage_cost_per_minute) : undefined,
+      is_free: Boolean(raw.is_free),
+      access_type: String(raw.access_type ?? "public"),
+      ocm_url: raw.ocm_url ? String(raw.ocm_url) : undefined,
+      last_synced_at: String(raw.last_synced_at ?? new Date().toISOString()),
+      connectors: Array.isArray(raw.connectors) ? (raw.connectors as ChargerConnector[]) : [],
+    }
+  } catch {
+    return null
+  }
 }
 
 function parseOcmStatus(title: string | null | undefined): ChargerStatus {
@@ -317,8 +349,11 @@ function ConnectorRow({ conn }: { conn: ChargerConnector }) {
   )
 }
 
-export default async function CargadorPage({ params }: PageProps) {
-  const charger = await getChargerData(params.id)
+export default async function CargadorPage({ params, searchParams }: PageProps) {
+  let charger = await getChargerData(params.id)
+  if (!charger && searchParams.d) {
+    charger = parseInlineCharger(params.id, searchParams.d)
+  }
 
   if (!charger) {
     return (
